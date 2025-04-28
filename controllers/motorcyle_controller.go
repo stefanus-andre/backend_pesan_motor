@@ -3,6 +3,7 @@ package controllers
 import (
 	"github.com/gin-gonic/gin"
 	"net/http"
+	"strconv"
 	"test_backend/database"
 	"test_backend/models"
 	"time"
@@ -21,36 +22,54 @@ type CreateMotorcycleRequest struct {
 }
 
 func CreateDataMotorcycle(c *gin.Context) {
-	var request CreateMotorcycleRequest
 
-	if err := c.ShouldBindJSON(&request); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if err := c.Request.ParseMultipartForm(10 << 20); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to parse form data"})
 		return
 	}
 
-	//tanggalPinjam, err := time.Parse("2006-01-02", request.TanggalPinjam)
-	//if err != nil {
-	//	c.JSON(http.StatusBadRequest, gin.H{"error": "Format tanggal pinjam tidak valid. Gunakan format YYYY-MM-DD"})
-	//	return
-	//}
-	//
-	//tanggalKembali, err := time.Parse("2006-01-02", request.TanggalKembali)
-	//if err != nil {
-	//	c.JSON(http.StatusBadRequest, gin.H{"error": "Format tanggal kembali tidak valid. Gunakan format YYYY-MM-DD"})
-	//	return
-	//}
+	namaMotor := c.PostForm("nama_motor")
+	jenisMotor := c.PostForm("jenis_motor")
+	nomorPlatMotor := c.PostForm("nomor_plat_motor")
+	qtyMotor := c.PostForm("qty_motor")
+	hargaSewaMotor := c.PostForm("harga_sewa_motor")
+	// tanggalPinjam := c.PostForm("tanggal_pinjam")
+	// tanggalKembali := c.PostForm("tanggal_kembali")
+
+	file, err := c.FormFile("image_motor")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Image file is required"})
+		return
+	}
+
+	imagePath := "uploads/" + file.Filename
+	if err := c.SaveUploadedFile(file, imagePath); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save image"})
+		return
+	}
+
+	qtyMotorValue, err := strconv.ParseUint(qtyMotor, 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Qty Motor must be a number"})
+		return
+	}
+	hargaSewaMotorValue, err := strconv.ParseUint(hargaSewaMotor, 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Harga Sewa Motor must be a number"})
+		return
+	}
 
 	motorcycle := models.Motorcycle{
-		NamaMotor:      request.NamaMotor,
-		JenisMotor:     request.JenisMotor,
-		NomorPlatMotor: request.NomorPlatMotor,
-		QtyMotor:       request.QtyMotor,
-		HargaSewaMotor: request.HargaSewaMotor,
-		ImageMotor:     request.ImageMotor,
+		NamaMotor:      namaMotor,
+		JenisMotor:     jenisMotor,
+		NomorPlatMotor: nomorPlatMotor,
+		QtyMotor:       uint32(qtyMotorValue),
+		HargaSewaMotor: uint32(hargaSewaMotorValue),
+		ImageMotor:     imagePath, // Save the image path
 	}
 
 	if err := database.DB.Create(&motorcycle).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal Membuat Data Motor"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create motorcycle data"})
 		return
 	}
 
@@ -83,7 +102,7 @@ type UpdateMotorcycleRequest struct {
 	NamaMotor      string `json:"nama_motor"`
 	JenisMotor     string `json:"jenis_motor"`
 	NomorPlatMotor string `json:"nomor_plat_motor"`
-	QtyMotor       string `json:"qty_motor"`
+	QtyMotor       uint32 `json:"qty_motor"` // Changed from string to uint32
 	HargaSewaMotor uint32 `json:"harga_sewa_motor"`
 	TanggalPinjam  string `json:"tanggal_pinjam"`
 	TanggalKembali string `json:"tanggal_kembali"`

@@ -14,5 +14,5 @@ type Motorcycle struct {
 	HargaSewaMotor uint32    `json:"harga_sewa_motor"`
 	TanggalPinjam  time.Time `json:"tanggal_pinjam" gorm:"type:date"`
 	TanggalKembali time.Time `json:"tanggal_kembali" gorm:"type:date"`
-	ImageMotor     string    `json:"image_motor"`
+	ImageMotor     string    `gorm:"size:255" json:"image_motor"` // Add this field
 }
